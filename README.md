@@ -8,7 +8,7 @@
 > [!NOTE]
 >
 > - **Deadline**: February 2025 ?
-> - 
+
 ## TO DO
 
 1. 

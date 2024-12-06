@@ -5,6 +5,10 @@
 ![Static Badge](https://img.shields.io/badge/Notice-attention_les_yeux-red)
 <br />
 
+> [!NOTE]
+>
+> - **Deadline**: February 2025 ?
+> - 
 ## TO DO
 
 1. 

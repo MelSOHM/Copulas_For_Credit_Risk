@@ -7,7 +7,8 @@
 
 > [!NOTE]
 >
-> - **Deadline**: February 2025 ?
+> - Date de rendu: Dimanche 2 Février
+> - Soutenances: entre le 3 et le 14 Février
 
 ## TO DO
 

@@ -12,7 +12,10 @@
 
 ## TO DO
 
-1. 
+1. Perform a numerical comparison of Gaussian and Archimedean copulas.
+2. Develop a pricing tool for CLO tranches using both copula approaches.
+3. Apply the tool to the given infrastructure loans portfolio.
+4. Analyze the strengths and weaknesses of each model, particularly in the context of infrastructure loans.
 
 ## Ideas:
 

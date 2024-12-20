@@ -1,2 +1,12 @@
 creditProj/
+
+# Fichiers de cache Python
+__pycache__/
+*.py[cod]
+
+# Configurations locales
+*.env
+*.DS_Store
+
+# Ignorer tous les fichiers CSV
 *.csv

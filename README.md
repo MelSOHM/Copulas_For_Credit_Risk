@@ -29,13 +29,13 @@ Description of the project: You are tasked with structuring a collateralized loa
 
 - **Tranche Structuring**: Define the cash flow waterfall for the CLO tranches (0-10%, 10-30%, 30-100%) and determine how losses are allocated across the tranches.
 
-- **Pricing Framework**: Develop a pricing mechanism for the CLO tranches based on expected losses, investor risk preferences, and market conditions (e.g., interest rates, recovery rates).
+- **Pricing Framework**: Develop a pricing mechanism for the CLO tranches based on expected losses, investor risk preferences, and market conditions (e.g., interest rates, recovery rates). Monte-Carlo pricing using the copulas ?
 
 - **Risk Analysis**: Evaluate the tail risk and sensitivity of each tranche under different economic scenarios using stress testing and scenario analysis.
 
 - **Comparison Metrics**: Define clear metrics (e.g., VaR, expected shortfall, tranche loss distributions) to compare the performance of Gaussian and Archimedean copulas.
 
-- **Visualization**: Create visualizations to represent default correlations, tranche loss distributions, and risk profiles for different copula models.
+- **Visualization**: Create visualizations to represent default correlations, tranche loss distributions, and risk profiles for different copula models. 2D plot of samples drawn from the 2 different copulas.
 
 - **Documentation and Automation**: Develop a detailed user guide for the pricing tool, including examples of how to use it. Automate repetitive tasks for efficiency.
 

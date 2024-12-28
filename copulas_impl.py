@@ -3,6 +3,8 @@ from scipy.stats import norm, multivariate_normal
 from copulas.univariate import GaussianKDE
 from copulas.bivariate import Clayton, Gumbel
 import matplotlib.pyplot as plt
+from scipy.stats import uniform
+from numpy.random import default_rng
 
 def gaussian_copula_sample(correlation_matrix, num_samples):
     """
@@ -45,6 +47,51 @@ def archimedean_copula_sample(copula_class, num_samples):
     
     samples = copula.sample(num_samples)
     return samples
+
+
+def clayton_copula_multivariate(theta, num_samples, portfolio_size):
+    rng = default_rng()
+    
+    # Générer une variable de base
+    u0 = uniform.rvs(size=num_samples)
+    
+    # Générer les marges conditionnelles
+    samples = []
+    for _ in range(portfolio_size):
+        u = uniform.rvs(size=num_samples)
+        marginal = (u0 ** (-theta) - 1 + u ** (-theta)) ** (-1 / theta)
+        samples.append(marginal)
+    
+    return np.array(samples).T
+
+def gumbel_copula_multivariate(theta, num_samples, portfolio_size):
+    """
+    Génère des échantillons multivariés à partir d'une copule de Gumbel.
+
+    Args:
+        theta (float): Paramètre de dépendance de la copule de Gumbel (\( \theta \geq 1 \)).
+        num_samples (int): Nombre d'échantillons à générer.
+        portfolio_size (int): Dimensionnalité du portefeuille (nombre de prêts).
+
+    Returns:
+        ndarray: Échantillons multivariés de la copule de Gumbel.
+    """
+    if theta < 1:
+        raise ValueError("Theta doit être supérieur ou égal à 1 pour la copule de Gumbel.")
+
+    rng = default_rng()
+    
+    # Générer une variable de base
+    u0 = uniform.rvs(size=num_samples)
+    
+    # Générer les marges conditionnelles
+    samples = []
+    for _ in range(portfolio_size):
+        u = uniform.rvs(size=num_samples)
+        marginal = np.exp(-((-np.log(u0)) ** theta + (-np.log(u)) ** theta) ** (1 / theta))
+        samples.append(marginal)
+    
+    return np.array(samples).T
 
 
 def plot_samples(samples, title):

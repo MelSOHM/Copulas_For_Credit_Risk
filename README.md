@@ -25,7 +25,7 @@ Description of the project: You are tasked with structuring a collateralized loa
 
 - **Model Implementation**: Implement both Gaussian and Archimedean copulas in Python, using libraries like `scipy`, `copulas`, or `statsmodels` for efficient computation. ✅
 
-- **Portfolio Simulation**: Simulate default scenarios for the portfolio of 50 loans, using the chosen copula models to generate correlated defaults.
+- **Portfolio Simulation**: Simulate default scenarios for the portfolio of 50 loans, using the chosen copula models to generate correlated defaults. ✅
 
 - **Tranche Structuring**: Define the cash flow waterfall for the CLO tranches (0-10%, 10-30%, 30-100%) and determine how losses are allocated across the tranches.
 

@@ -41,3 +41,6 @@ Description of the project: You are tasked with structuring a collateralized loa
 
 - **Insights and Recommendations**: Summarize findings on the suitability of each copula model for pricing CLOs and provide recommendations for practical use cases in infrastructure loans.
 
+- **Analyse the results and test on insightful data**
+
+- **Write the report**

@@ -21,9 +21,9 @@ Description of the project: You are tasked with structuring a collateralized loa
 
 ## Ideas:
 
-- **Data Preparation**: Gather and preprocess loan data, including loan amounts, maturities, default probabilities, and correlations. Ensure the dataset is clean and representative of infrastructure loans.
+- **Data Preparation**: Gather and preprocess loan data, including loan amounts, maturities, default probabilities, and correlations. Ensure the dataset is clean and representative of infrastructure loans. ✅
 
-- **Model Implementation**: Implement both Gaussian and Archimedean copulas in Python, using libraries like `scipy`, `copulas`, or `statsmodels` for efficient computation.
+- **Model Implementation**: Implement both Gaussian and Archimedean copulas in Python, using libraries like `scipy`, `copulas`, or `statsmodels` for efficient computation. ✅
 
 - **Portfolio Simulation**: Simulate default scenarios for the portfolio of 50 loans, using the chosen copula models to generate correlated defaults.
 

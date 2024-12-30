@@ -27,7 +27,7 @@ Description of the project: You are tasked with structuring a collateralized loa
 
 - **Portfolio Simulation**: Simulate default scenarios for the portfolio of 50 loans, using the chosen copula models to generate correlated defaults. ✅
 
-- **Tranche Structuring**: Define the cash flow waterfall for the CLO tranches (0-10%, 10-30%, 30-100%) and determine how losses are allocated across the tranches.
+- **Tranche Structuring**: Define the cash flow waterfall for the CLO tranches (0-10%, 10-30%, 30-100%) and determine how losses are allocated across the tranches. ✅
 
 - **Pricing Framework**: Develop a pricing mechanism for the CLO tranches based on expected losses, investor risk preferences, and market conditions (e.g., interest rates, recovery rates). Monte-Carlo pricing using the copulas ?
 

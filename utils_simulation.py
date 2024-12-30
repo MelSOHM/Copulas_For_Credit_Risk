@@ -70,3 +70,41 @@ def print_summary(defaults_matrix, portfolio, recovery_rate = 0.4):
     default_rates_by_tranche = portfolio.groupby("Tranche")["Average_Default_Contribution"].mean()
 
     print("Taux de défaut moyen par tranche :\n", default_rates_by_tranche)
+    
+
+def allocate_losses_by_transches(defaults_matrix, portfolio, recovery_rate = 0.4,
+                                 senior_attachment= 0.3, mezz_attachment= 0.1):
+    losses = (1 - recovery_rate) * defaults_matrix @ portfolio["Loan_Amount"].values
+    portfolio_total = portfolio["Loan_Amount"].sum()
+    senior_limit = senior_attachment * portfolio_total
+    mezzanine_limit = mezz_attachment * portfolio_total
+    
+    equity_losses = np.where(losses > mezzanine_limit, mezzanine_limit, losses)
+    remaining_losses = losses - equity_losses
+    
+    mezzanine_losses = np.where(remaining_losses > senior_limit - mezzanine_limit, senior_limit - mezzanine_limit, remaining_losses)
+    remaining_losses = remaining_losses - mezzanine_losses
+
+    senior_losses = remaining_losses
+    
+    equity_losses = np.round(equity_losses/mezzanine_limit*100,4)
+    mezzanine_losses = np.round(mezzanine_losses/(senior_limit - mezzanine_limit)*100,4)
+    senior_losses = np.round(equity_losses/(portfolio_total-senior_limit)*100,4)
+    
+    return equity_losses, mezzanine_losses, senior_losses
+
+def simmulate_losses_tranche(equity_losses, mezzanine_losses, senior_losses):
+    summary = {
+        "Tranche": ["Senior", "Mezzanine", "Equity"],
+        "Pertes Moyennes": [np.mean(senior_losses), np.mean(mezzanine_losses), np.mean(equity_losses)],
+        "Pertes Maximales": [np.max(senior_losses), np.max(mezzanine_losses), np.max(equity_losses)],
+        "Pertes Minimales": [np.min(senior_losses), np.min(mezzanine_losses), np.min(equity_losses)],
+    }
+    summary_df = pd.DataFrame(summary)
+    print(summary_df)
+    
+    plt.boxplot([senior_losses, mezzanine_losses, equity_losses], labels=["Senior", "Mezzanine", "Equity"])
+    plt.title("Distribution des Pertes par Tranche")
+    plt.ylabel("Pertes (%)")
+    plt.grid(True)
+    plt.show()

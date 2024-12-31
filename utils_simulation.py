@@ -76,6 +76,12 @@ def allocate_losses_by_transches(defaults_matrix, portfolio, recovery_rate = 0.4
                                  senior_attachment= 0.3, mezz_attachment= 0.1, percentage=True):
     losses = (1 - recovery_rate) * defaults_matrix @ portfolio["Loan_Amount"].values
     portfolio_total = portfolio["Loan_Amount"].sum()
+
+    return apply_waterwall(losses, portfolio_total, senior_attachment, mezz_attachment, percentage)
+
+
+def apply_waterwall(losses, portfolio_total, 
+                    senior_attachment= 0.3, mezz_attachment= 0.1, percentage=True):
     senior_limit = senior_attachment * portfolio_total
     mezzanine_limit = mezz_attachment * portfolio_total
     
@@ -91,7 +97,9 @@ def allocate_losses_by_transches(defaults_matrix, portfolio, recovery_rate = 0.4
         equity_losses = np.round(equity_losses/mezzanine_limit*100,4)
         mezzanine_losses = np.round(mezzanine_losses/(senior_limit - mezzanine_limit)*100,4)
         senior_losses = np.round(equity_losses/(portfolio_total-senior_limit)*100,4)
+        
     return equity_losses, mezzanine_losses, senior_losses
+
 
 def simmulate_losses_tranche(equity_losses, mezzanine_losses, senior_losses):
     summary = {

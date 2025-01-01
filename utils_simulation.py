@@ -100,6 +100,111 @@ def apply_waterwall(losses, portfolio_total,
         
     return equity_losses, mezzanine_losses, senior_losses
 
+def apply_waterwall_fluxes(losses, principal_payments, interest_payments, spread, portfolio_total, 
+                           senior_attachment= 0.3, mezz_attachment= 0.1):
+    
+    senior_limit = senior_attachment * portfolio_total
+    mezzanine_limit = mezz_attachment * portfolio_total
+    
+    # Losses 
+    equity_losses = np.where(losses > mezzanine_limit, mezzanine_limit, losses)
+    remaining_losses = losses - equity_losses
+    mezzanine_losses = np.where(remaining_losses > senior_limit - mezzanine_limit, senior_limit - mezzanine_limit, remaining_losses)
+    remaining_losses = remaining_losses - mezzanine_losses
+    senior_losses = remaining_losses
+    
+    #Cash
+    senior_cash = min(1-senior_attachment)
+            
+    return equity_losses, mezzanine_losses, senior_losses
+
+def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, losses, 
+                                        tranche_limits, tranche_rates, risk_free_rate):
+    """
+    Calcule les flux de trésorerie pour les tranches d'un CDO en tenant compte des pertes, paiements,
+    et des soldes cumulés des tranches.
+    
+    Parameters:
+        principal_payments (numpy.ndarray): Tableau 3D (samples, loans, times) des paiements de principal.
+        interest_payments (numpy.ndarray): Tableau 3D (samples, loans, times) des paiements d'intérêts.
+        losses (numpy.ndarray): Tableau 3D (samples, loans, times) des pertes.
+        tranche_limits (list): Limites cumulées des tranches [Equity %, Mezzanine %, Senior %].
+        tranche_rates (list): Rémunérations des tranches (Equity, Mezzanine, Senior).
+        risk_free_rate (float): Taux sans risque pour actualiser les flux.
+
+    Returns:
+        dict: Un dictionnaire avec les flux nets pour chaque tranche sous forme de tableau (samples, times).
+    """
+    # Combiner les flux nets
+    net_flows = principal_payments + interest_payments - losses  # (samples, loans, times)
+    
+    # Agréger les flux par temps pour chaque sample
+    total_flows = np.sum(net_flows, axis=1)  # (samples, times)
+    total_losses = np.sum(losses, axis=1)  # (samples, times)
+    
+    # Initialiser les résultats
+    tranche_results = {
+        "Equity": np.zeros_like(total_flows),
+        "Mezzanine": np.zeros_like(total_flows),
+        "Senior": np.zeros_like(total_flows)
+    }
+
+    # Soldes cumulés pour chaque tranche
+    tranche_balances = {
+        "Equity": np.full(total_flows.shape[0], tranche_limits[0]),  # 10% initial pour Equity
+        "Mezzanine": np.full(total_flows.shape[0], tranche_limits[1]),  # 20% initial pour Mezzanine
+        "Senior": np.full(total_flows.shape[0], tranche_limits[2])   # 70% initial pour Senior
+    }
+
+    # Répartir les pertes et les paiements par tranche
+    print(tranche_rates)
+    equity_rate, mezzanine_rate, senior_rate = tranche_rates + risk_free_rate
+
+    for t in range(total_flows.shape[1]):  # Pour chaque période
+        for sample in range(total_flows.shape[0]):  # Pour chaque échantillon
+            remaining_loss = total_losses[sample, t]
+            remaining_payment = total_flows[sample, t]
+
+            # Allouer les pertes
+            # Pertes sur Equity
+            if tranche_balances["Equity"][sample] > 0:
+                equity_loss = min(remaining_loss, tranche_balances["Equity"][sample])
+                tranche_results["Equity"][sample, t] -= equity_loss
+                tranche_balances["Equity"][sample] -= equity_loss
+                remaining_loss -= equity_loss
+
+            # Pertes sur Mezzanine
+            if tranche_balances["Mezzanine"][sample] > 0:
+                mezzanine_loss = min(remaining_loss, tranche_balances["Mezzanine"][sample])
+                tranche_results["Mezzanine"][sample, t] -= mezzanine_loss
+                tranche_balances["Mezzanine"][sample] -= mezzanine_loss
+                remaining_loss -= mezzanine_loss
+                
+            # Pertes sur Senior
+            senior_loss = min(remaining_loss, tranche_balances["Senior"][sample])
+            tranche_results["Senior"][sample, t] -= senior_loss
+            tranche_balances["Senior"][sample] -= senior_loss
+            remaining_loss -= senior_loss
+
+            # Allouer les paiements
+            # Paiements sur Senior
+            senior_payment = min(remaining_payment, senior_rate * tranche_balances["Senior"][sample])
+            tranche_results["Senior"][sample, t] += senior_payment
+            remaining_payment -= senior_payment
+
+            # Paiements sur Mezzanine
+            if tranche_balances["Mezzanine"][sample] > 0:
+                mezzanine_payment = min(remaining_payment, mezzanine_rate * tranche_balances["Mezzanine"][sample])
+                tranche_results["Mezzanine"][sample, t] += mezzanine_payment
+                remaining_payment -= mezzanine_payment
+
+            # Paiements sur Equity
+            if tranche_balances["Equity"][sample] > 0:
+                equity_payment = remaining_payment  # Ce qui reste va à Equity
+                tranche_results["Equity"][sample, t] += equity_payment
+                remaining_payment -= equity_payment
+
+    return tranche_results
 
 def simmulate_losses_tranche(equity_losses, mezzanine_losses, senior_losses):
     summary = {

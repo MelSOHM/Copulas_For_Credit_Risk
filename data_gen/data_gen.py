@@ -12,6 +12,7 @@ loan_ids = [f"Loan_{i+1}" for i in range(num_loans)]
 loan_amounts = np.random.uniform(5e5, 2e6, num_loans)  # Loan amounts between $500k and $2M
 maturities = np.random.randint(1, 10, num_loans)  # Maturities between 1 and 10 years
 default_probabilities = np.random.uniform(0.01, 0.2, num_loans)  # Default probabilities between 1% and 20%
+interest_rates = np.random.uniform(0.02, 0.1, num_loans)  # Interest rates between 2% and 10%
 
 def generate_correlation_matrix(size):
     """
@@ -53,7 +54,8 @@ loan_portfolio = pd.DataFrame({
     "Loan_ID": loan_ids,
     "Loan_Amount": loan_amounts,
     "Maturity_Years": maturities,
-    "Default_Probability": default_probabilities
+    "Default_Probability": default_probabilities,
+    "Interest_Rate": interest_rates
 })
 
 # Save the data and correlation matrix to CSV for further use

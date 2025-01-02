@@ -41,7 +41,8 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
     loan_states = np.zeros((num_samples, len(portfolio), num_periods))  # 0 = non défaut, 1 = défaut 
     annual_default_probabilities = portfolio["Default_Probability"].values  # Probabilités de défaut initiales (à un an)
 
-    tranche_spreads = tranche_spreads or {"Equity": 0.1, "Mezzanine": 0.03, "Senior": 0.01}  # Par défaut en %
+    tranche_spreads = tranche_spreads or {"Mezzanine": 0.03, "Senior": 0.01}  
+    # Par défaut en % (La tranche equity prend ce qu'il reste une fois ces deux tranches payé)
     correlation_matrix = conversion_to_array(correlation_matrix)
     active_correlation_matrix = correlation_matrix.copy()  # Matrice de corrélation initiale
     
@@ -94,19 +95,96 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
     net_cash_flows = cash_flows - losses_per_period # Flux nets par période
     
     tranche_limits = portfolio_total*np.array([mezz_attachment, senior_attachment-mezz_attachment, 1-senior_attachment])
-    tranche_prices = ut.calculate_cdo_cashflows_with_limits(principal_payments, 
-                                                            interest_payments, 
-                                                            losses_per_period, 
-                                                            tranche_limits, 
-                                                            tranche_rates=np.array(list(tranche_spreads.values())), 
-                                                            risk_free_rate=risk_free_rate)
+    tranche_prices, initial_investment, expected_perf = ut.calculate_cdo_cashflows_with_limits(principal_payments, 
+                                                                                               interest_payments,
+                                                                                               losses_per_period, 
+                                                                                               tranche_limits, 
+                                                                                               tranche_rates=np.array(list(tranche_spreads.values())), 
+                                                                                               risk_free_rate=risk_free_rate)
     tranche_prices = {
         "Senior": tranche_prices["Senior"].sum(axis=1).mean(),
         "Mezzanine": tranche_prices["Mezzanine"].sum(axis=1).mean(),
         "Equity": tranche_prices["Equity"].sum(axis=1).mean(),
     }
 
-    return net_cash_flows, tranche_prices, interest_payments, principal_payments, loan_states, losses_per_period
+    return net_cash_flows, tranche_prices, interest_payments, principal_payments, loan_states, losses_per_period, initial_investment, expected_perf
+
+def pricing_CLO_multi_periode_clayton(portfolio, recovery_rate=0.4, 
+                                      tranche_spreads=None, risk_free_rate=0.03, num_samples=100,
+                                      senior_attachment= 0.3, mezz_attachment= 0.1):
+    
+    num_periods = portfolio["Maturity_Years"].max()
+    loan_states = np.zeros((num_samples, len(portfolio), num_periods))  # 0 = non défaut, 1 = défaut 
+    annual_default_probabilities = portfolio["Default_Probability"].values  # Probabilités de défaut initiales (à un an)
+
+    # Par défaut en % (La tranche equity prend ce qu'il reste une fois ces deux tranches payé)
+    tranche_spreads = tranche_spreads or {"Mezzanine": 0.03, "Senior": 0.01}  
+    
+    for t in range(num_periods):
+        if t == 0:
+            # Première période : directement utiliser les probabilités initiales
+            correlated_samples = cop.clayton_copula_multivariate(theta=1,
+                                                                 num_samples=num_samples,
+                                                                 portfolio_size=len(portfolio))
+            loan_states[:, :, t] = (correlated_samples < annual_default_probabilities).astype(int)
+        else:
+            # Identifier les prêts actifs (non en défaut et dans leur période de maturité)
+            no_default = np.array(loan_states[:, :, t - 1]==0, dtype=bool)
+            not_matured = np.array(portfolio["Maturity_Years"].values[np.newaxis, :] > t, dtype=bool)
+            active_loans = (no_default & not_matured).astype(int) # Non en défaut et t < maturité 
+            # Simuler uniquement pour les prêts actifs
+            for sample_idx in range(active_loans.shape[0]):
+                active_indices = np.where(active_loans[sample_idx] == 1)[0]
+                if len(active_indices) > 0:
+                    correlated_samples = cop.clayton_copula_multivariate(theta=1,
+                                                        num_samples=1,
+                                                        portfolio_size=len(active_indices))
+                    # Simuler les défauts conditionnels
+                    conditional_defaults = (correlated_samples.squeeze() < annual_default_probabilities[active_indices]).astype(int)
+                    loan_states[sample_idx, active_indices, t] = conditional_defaults
+                
+    # Calculer les pertes
+    loan_amounts = portfolio["Loan_Amount"].values
+    portfolio_total = portfolio["Loan_Amount"].sum()
+    losses_per_period = (1 - recovery_rate) * (loan_states * loan_amounts[None, :, None])
+    
+    # Calcul des cash flows positifs
+    principal_payments = np.zeros_like(loan_states)  # Initialiser à 0 pour toutes les périodes
+    interest_payments = np.zeros_like(loan_states, dtype=float)
+
+    for i, loan in enumerate(portfolio.itertuples()):
+        maturity_period = int(loan.Maturity_Years) - 1  # Dernière période de maturité
+        
+        for t in range(num_periods):
+            if t == maturity_period:
+                # Paiement du principal uniquement à maturité si pas en défaut
+                for sample in range(num_samples):
+                    if np.all(loan_states[sample, i, :maturity_period + 1] == 0):  # Pas de défaut jusqu'à maturité
+                        principal_payments[sample, i, t] = loan.Loan_Amount
+                        interest_payments[sample, i, t] = loan.Loan_Amount * loan.Interest_Rate
+            elif t < maturity_period:
+                # Paiement des intérêts pour les périodes actives
+                for sample in range(num_samples):
+                    if np.all(loan_states[sample, i, :t + 1] == 0):  # Actif dans cette période
+                        interest_payments[sample, i, t] = loan.Loan_Amount * loan.Interest_Rate
+    
+    cash_flows = principal_payments + interest_payments # Flux totaux (principal + intérêts)
+    net_cash_flows = cash_flows - losses_per_period # Flux nets par période
+    
+    tranche_limits = portfolio_total*np.array([mezz_attachment, senior_attachment-mezz_attachment, 1-senior_attachment])
+    tranche_prices, initial_investment, expected_perf = ut.calculate_cdo_cashflows_with_limits(principal_payments, 
+                                                                                               interest_payments,
+                                                                                               losses_per_period, 
+                                                                                               tranche_limits, 
+                                                                                               tranche_rates=np.array(list(tranche_spreads.values())), 
+                                                                                               risk_free_rate=risk_free_rate)
+    tranche_prices = {
+        "Senior": tranche_prices["Senior"].sum(axis=1).mean(),
+        "Mezzanine": tranche_prices["Mezzanine"].sum(axis=1).mean(),
+        "Equity": tranche_prices["Equity"].sum(axis=1).mean(),
+    }
+
+    return net_cash_flows, tranche_prices, interest_payments, principal_payments, loan_states, losses_per_period, initial_investment, expected_perf
 
     
 def calculate_present_value(losses, discount_rate, num_periods=1):

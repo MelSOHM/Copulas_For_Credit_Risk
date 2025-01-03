@@ -53,7 +53,8 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
             loan_states[:, :, t] = (correlated_samples < annual_default_probabilities).astype(int)
         else:
             # Identifier les prêts actifs (non en défaut et dans leur période de maturité)
-            no_default = np.array(loan_states[:, :, t - 1]==0, dtype=bool)
+            assert np.all(loan_states[:, :, :].sum(axis=2)<=1)
+            no_default = np.array(loan_states[:, :, :t].sum(axis=2)==0, dtype=bool)
             not_matured = np.array(portfolio["Maturity_Years"].values[np.newaxis, :] > t, dtype=bool)
             active_loans = (no_default & not_matured).astype(int) # Non en défaut et t < maturité 
             # Simuler uniquement pour les prêts actifs
@@ -65,7 +66,7 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
                     # Simuler les défauts conditionnels
                     conditional_defaults = (correlated_samples < annual_default_probabilities[active_indices]).astype(int)
                     loan_states[sample_idx, active_indices, t] = conditional_defaults
-                
+
     # Calculer les pertes
     loan_amounts = portfolio["Loan_Amount"].values
     portfolio_total = portfolio["Loan_Amount"].sum()
@@ -109,7 +110,7 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
 
     return net_cash_flows, tranche_prices, interest_payments, principal_payments, loan_states, losses_per_period, initial_investment, expected_perf
 
-def pricing_CLO_multi_periode_clayton(portfolio, recovery_rate=0.4, 
+def pricing_CLO_multi_periode_clayton(copulas_type: str, portfolio, recovery_rate=0.4, 
                                       tranche_spreads=None, risk_free_rate=0.03, num_samples=100,
                                       senior_attachment= 0.3, mezz_attachment= 0.1):
     
@@ -123,24 +124,37 @@ def pricing_CLO_multi_periode_clayton(portfolio, recovery_rate=0.4,
     for t in range(num_periods):
         if t == 0:
             # Première période : directement utiliser les probabilités initiales
-            correlated_samples = cop.clayton_copula_multivariate(theta=1,
-                                                                 num_samples=num_samples,
-                                                                 portfolio_size=len(portfolio))
+            if copulas_type == 'clayton':
+                correlated_samples = cop.clayton_copula_multivariate(theta=1,
+                                                                    num_samples=num_samples,
+                                                                    portfolio_size=len(portfolio))
+            elif copulas_type == 'gumbel':
+                correlated_samples = cop.gumbel_copula_multivariate(theta=1,
+                                                    num_samples=num_samples,
+                                                    portfolio_size=len(portfolio))
+            else:
+                raise ValueError('copulas_type must be one of [gumbel, clayton]')
             loan_states[:, :, t] = (correlated_samples < annual_default_probabilities).astype(int)
         else:
             # Identifier les prêts actifs (non en défaut et dans leur période de maturité)
-            no_default = np.array(loan_states[:, :, t - 1]==0, dtype=bool)
+            assert np.all(loan_states[:, :, :].sum(axis=2)<=1)
+            no_default = np.array(loan_states[:, :, :t].sum(axis=2)==0, dtype=bool)
             not_matured = np.array(portfolio["Maturity_Years"].values[np.newaxis, :] > t, dtype=bool)
             active_loans = (no_default & not_matured).astype(int) # Non en défaut et t < maturité 
             # Simuler uniquement pour les prêts actifs
             for sample_idx in range(active_loans.shape[0]):
                 active_indices = np.where(active_loans[sample_idx] == 1)[0]
                 if len(active_indices) > 0:
-                    correlated_samples = cop.clayton_copula_multivariate(theta=1,
-                                                        num_samples=1,
-                                                        portfolio_size=len(active_indices))
+                    if copulas_type == 'clayton':
+                        correlated_samples = cop.clayton_copula_multivariate(theta=1,
+                                                            num_samples=1,
+                                                            portfolio_size=len(active_indices)).squeeze()
+                    elif copulas_type == 'gumbel':
+                        correlated_samples = cop.gumbel_copula_multivariate(theta=1,
+                                    num_samples=1,
+                                    portfolio_size=len(active_indices)).squeeze()
                     # Simuler les défauts conditionnels
-                    conditional_defaults = (correlated_samples.squeeze() < annual_default_probabilities[active_indices]).astype(int)
+                    conditional_defaults = (correlated_samples < annual_default_probabilities[active_indices]).astype(int)
                     loan_states[sample_idx, active_indices, t] = conditional_defaults
                 
     # Calculer les pertes

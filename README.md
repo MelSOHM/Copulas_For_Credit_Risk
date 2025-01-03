@@ -69,11 +69,9 @@ A loan is considered active if:
 
 ### **3. Loss Calculation**
 Losses are calculated as:
-$$
-\[
+$\[
 \text{Losses} = (1 - \text{Recovery Rate}) \times (\text{Defaulted Loans} \times \text{Loan Amount})
-\]
-$$
+\] $
 
 ### **4. Positive Cash Flow Calculation**
 Two types of positive cash flows are considered:

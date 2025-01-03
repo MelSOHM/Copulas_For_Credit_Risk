@@ -209,10 +209,9 @@ def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, l
                 remaining_payment -= mezzanine_payment
 
             # Paiements sur Equity
-            if tranche_balances["Equity"][sample] > 0:
-                equity_payment = remaining_payment  # Ce qui reste va à Equity
-                tranche_results["Equity"][sample, t] += equity_payment
-                remaining_payment -= equity_payment
+            equity_payment = remaining_payment  # Ce qui reste va à Equity
+            tranche_results["Equity"][sample, t] += equity_payment
+            remaining_payment -= equity_payment
                 
             assert remaining_payment == 0
 

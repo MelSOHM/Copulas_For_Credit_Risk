@@ -47,82 +47,86 @@ Description of the project: You are tasked with structuring a collateralized loa
 
 ## Documentation:
 
-# Documentation : Fonction de Pricing CLO avec Copules Gaussiennes
+# Documentation: CLO Pricing Function Using Gaussian Copulas
 
-Cette fonction implémente un modèle de pricer multi-périodes pour les Collateralized Loan Obligations (CLOs) en utilisant des copules gaussiennes pour simuler les corrélations de défaut entre les prêts d'un portefeuille. Elle permet de calculer les pertes, les flux de trésorerie (cash flows) positifs et négatifs, et d'estimer les prix des tranches (Senior, Mezzanine et Equity) sur plusieurs périodes.
+This function implements a multi-period pricing model for Collateralized Loan Obligations (CLOs), using Gaussian copulas to simulate default correlations between loans in a portfolio. It calculates losses, positive and negative cash flows, and estimates the prices of tranches (Senior, Mezzanine, and Equity) across multiple periods.
 
 ---
 
-## **Description de la Méthodologie**
+## **Methodology Description**
 
-### **1. Simulation des défauts avec une copule gaussienne**
-La fonction commence par simuler les défauts des prêts dans le portefeuille en utilisant une copule gaussienne pour capturer les dépendances entre les défauts.
+### **1. Default Simulation Using a Gaussian Copula**
+The function starts by simulating loan defaults in the portfolio using a Gaussian copula to account for dependencies between defaults.
 
-- **Étape initiale** : Les probabilités de défaut annuelles des prêts sont utilisées pour la première période.
-- **Étapes suivantes** : Les prêts actifs (non en défaut et encore dans leur période de maturité) sont identifiés. Des échantillons corrélés sont générés pour ces prêts à chaque période suivante.
-- **Conditionnalité** : Les défauts pour une période donnée sont simulés uniquement pour les prêts actifs, en tenant compte des corrélations conditionnelles définies par la copule.
+- **Initial Step**: Annual default probabilities of loans are used for the first period.
+- **Subsequent Steps**: Active loans (those not in default and within their maturity period) are identified. Correlated samples are generated for these loans at each subsequent period.
+- **Conditionality**: Defaults for a given period are simulated only for active loans, considering conditional correlations defined by the copula.
 
-### **2. Identification des prêts actifs**
-Un prêt est considéré comme actif si :
-- Il n'est pas en défaut pour toutes les périodes précédentes.
-- Sa période de maturité n'est pas encore atteinte.
+### **2. Identification of Active Loans**
+A loan is considered active if:
+- It has not defaulted in any previous periods.
+- Its maturity period has not yet been reached.
 
-### **3. Calcul des pertes**
-Les pertes sont calculées comme suit :
+### **3. Loss Calculation**
+Losses are calculated as:
+$$
 \[
-\text{Pertes} = (1 - \text{Taux de recouvrement}) \times (\text{Prêts en défaut} \times \text{Montant du prêt})
+\text{Losses} = (1 - \text{Recovery Rate}) \times (\text{Defaulted Loans} \times \text{Loan Amount})
 \]
+$$
 
-### **4. Calcul des flux de trésorerie positifs**
-Deux types de flux positifs sont considérés :
-- **Paiements de principal** : Effectués uniquement à la maturité des prêts qui ne sont pas en défaut.
-- **Paiements d'intérêts** : Effectués à chaque période pour les prêts actifs. Les intérêts sont calculés comme :
+### **4. Positive Cash Flow Calculation**
+Two types of positive cash flows are considered:
+- **Principal Payments**: Paid only at loan maturity if the loan is not in default.
+- **Interest Payments**: Paid at each period for active loans. Interest is calculated as:
+$$
 \[
-\text{Intérêts} = \text{Montant du prêt} \times \text{Taux d'intérêt du prêt}
+\text{Interest} = \text{Loan Amount} \times \text{Loan Interest Rate}
 \]
+$$
 
-### **5. Flux nets et pricing des tranches**
-Les flux nets sont obtenus en soustrayant les pertes aux flux positifs (principal + intérêts). Les flux nets sont ensuite alloués aux différentes tranches (Senior, Mezzanine, Equity) en fonction des limites d'attachement définies.
-
----
-
-## **Paramètres de la Fonction**
-
-### **Entrées**
-- **`correlation_matrix`** *(ndarray)* : Matrice de corrélation entre les prêts du portefeuille.
-- **`portfolio`** *(pd.DataFrame)* : Portefeuille de prêts. Doit contenir les colonnes suivantes :
-  - `Loan_Amount` : Montant principal du prêt.
-  - `Maturity_Years` : Maturité du prêt en années.
-  - `Default_Probability` : Probabilité de défaut annuelle.
-  - `Interest_Rate` : Taux d'intérêt associé au prêt.
-- **`recovery_rate`** *(float, défaut = 0.4)* : Taux de recouvrement en cas de défaut.
-- **`tranche_spreads`** *(dict, défaut = `{"Mezzanine": 0.03, "Senior": 0.01}`)* : Spreads des tranches Mezzanine et Senior.
-- **`risk_free_rate`** *(float, défaut = 0.03)* : Taux sans risque utilisé pour actualiser les cash flows.
-- **`num_samples`** *(int, défaut = 100)* : Nombre de simulations Monte Carlo.
-- **`senior_attachment`** *(float, défaut = 0.3)* : Attachement supérieur pour la tranche Senior (en proportion du portefeuille total).
-- **`mezz_attachment`** *(float, défaut = 0.1)* : Attachement supérieur pour la tranche Mezzanine (en proportion du portefeuille total).
-
-### **Sorties**
-- **`net_cash_flows`** *(ndarray)* : Flux nets (positifs - pertes) pour chaque période et chaque simulation.
-- **`tranche_prices`** *(dict)* : Prix moyens des tranches Senior, Mezzanine et Equity.
-- **`interest_payments`** *(ndarray)* : Paiements d'intérêts par période pour chaque simulation.
-- **`principal_payments`** *(ndarray)* : Paiements du principal par période pour chaque simulation.
-- **`loan_states`** *(ndarray)* : États des prêts (0 = actif, 1 = défaut) pour chaque période et chaque simulation.
-- **`losses_per_period`** *(ndarray)* : Pertes totales par période pour chaque simulation.
-- **`initial_investment`** *(dict)* : Investissement initial pour chaque tranche.
-- **`expected_perf`** *(dict)* : Performances attendues des tranches (rendement, perte moyenne, etc.).
+### **5. Net Cash Flows and Tranche Pricing**
+Net cash flows are obtained by subtracting losses from positive cash flows (principal + interest). Net cash flows are then allocated to different tranches (Senior, Mezzanine, Equity) based on the defined attachment points.
 
 ---
 
-## **Exemple d'Utilisation**
+## **Function Parameters**
+
+### **Inputs**
+- **`correlation_matrix`** *(ndarray)*: Correlation matrix between loans in the portfolio.
+- **`portfolio`** *(pd.DataFrame)*: Loan portfolio. Must include the following columns:
+  - `Loan_Amount`: Loan principal amount.
+  - `Maturity_Years`: Loan maturity in years.
+  - `Default_Probability`: Annual default probability.
+  - `Interest_Rate`: Interest rate associated with the loan.
+- **`recovery_rate`** *(float, default = 0.4)*: Recovery rate in case of default.
+- **`tranche_spreads`** *(dict, default = `{"Mezzanine": 0.03, "Senior": 0.01}`)*: Spreads for Mezzanine and Senior tranches.
+- **`risk_free_rate`** *(float, default = 0.03)*: Risk-free rate used to discount cash flows.
+- **`num_samples`** *(int, default = 100)*: Number of Monte Carlo simulations.
+- **`senior_attachment`** *(float, default = 0.3)*: Senior tranche attachment point (as a proportion of total portfolio).
+- **`mezz_attachment`** *(float, default = 0.1)*: Mezzanine tranche attachment point (as a proportion of total portfolio).
+
+### **Outputs**
+- **`net_cash_flows`** *(ndarray)*: Net cash flows (positive flows - losses) for each period and simulation.
+- **`tranche_prices`** *(dict)*: Average prices of Senior, Mezzanine, and Equity tranches.
+- **`interest_payments`** *(ndarray)*: Interest payments per period for each simulation.
+- **`principal_payments`** *(ndarray)*: Principal payments per period for each simulation.
+- **`loan_states`** *(ndarray)*: Loan states (0 = active, 1 = default) for each period and simulation.
+- **`losses_per_period`** *(ndarray)*: Total losses per period for each simulation.
+- **`initial_investment`** *(dict)*: Initial investment for each tranche.
+- **`expected_perf`** *(dict)*: Expected performance of tranches (yield, average loss, etc.).
+
+---
+
+## **Example Usage**
 
 ```python
-# Importer la fonction et les librairies nécessaires
+# Import the function and necessary libraries
 import pandas as pd
 import numpy as np
-from votre_module import pricing_CLO_multi_periode_gaussian
+from your_module import pricing_CLO_multi_periode_gaussian
 
-# Créer un portefeuille fictif
+# Create a sample portfolio
 portfolio = pd.DataFrame({
     "Loan_Amount": [1_000_000, 2_000_000, 1_500_000],
     "Maturity_Years": [5, 3, 4],
@@ -130,14 +134,14 @@ portfolio = pd.DataFrame({
     "Interest_Rate": [0.05, 0.04, 0.045]
 })
 
-# Matrice de corrélation
+# Correlation matrix
 correlation_matrix = np.array([
     [1.0, 0.2, 0.3],
     [0.2, 1.0, 0.4],
     [0.3, 0.4, 1.0]
 ])
 
-# Appeler la fonction
+# Call the function
 results = pricing_CLO_multi_periode_gaussian(
     correlation_matrix,
     portfolio,
@@ -147,28 +151,26 @@ results = pricing_CLO_multi_periode_gaussian(
     num_samples=1000
 )
 
-# Résultats
+# Results
 net_cash_flows, tranche_prices, interest_payments, principal_payments, loan_states, losses_per_period, initial_investment, expected_perf = results
 
-print("Prix des tranches :", tranche_prices)
+print("Tranche prices:", tranche_prices)
 ```
 
 ---
 
-## **Notes Importantes**
+## **Key Notes**
 
-1. **Hypothèses** :
-   - Les probabilités de défaut annuelles sont constantes sur toutes les périodes.
-   - La matrice de corrélation reste fixe (peut être modifiée pour refléter des dynamiques temporelles).
-   - Les paiements d'intérêts ne sont effectués que si le prêt est actif (pas en défaut).
+1. **Assumptions**:
+   - Annual default probabilities are constant across all periods.
+   - The correlation matrix remains fixed (can be adapted to reflect temporal dynamics).
+   - Interest payments are made only if the loan is active (not in default).
 
-2. **Extensions possibles** :
-   - Incorporer une structure temporelle dans les corrélations.
-   - Permettre des probabilités de défaut dynamiques.
-   - Ajouter des coûts ou pénalités pour la tranche Equity.
+2. **Potential Extensions**:
+   - Incorporate a temporal structure in correlations.
+   - Allow dynamic default probabilities.
+   - Add costs or penalties for the Equity tranche.
+   - Incorporate loan pre-payement
 
----
-
-Cette fonction offre une grande flexibilité pour analyser les performances et risques liés aux CLOs tout en restant suffisamment rapide pour un usage pratique grâce à l'approche Monte Carlo et l'utilisation des copules. Elle peut être adaptée selon les besoins spécifiques de votre portefeuille ou méthodologie.
 
 

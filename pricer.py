@@ -36,10 +36,36 @@ import copulas_impl as cop
 def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_rate=0.4, 
                                        tranche_spreads=None, risk_free_rate=0.03, num_samples=100,
                                        senior_attachment= 0.3, mezz_attachment= 0.1):
-    
+    """
+    Pricer multi-périodes pour un CDO en utilisant un modèle de copule gaussienne.
+
+    Args:
+        correlation_matrix (ndarray): Matrice de corrélation entre les prêts.
+        portfolio (pd.DataFrame): Portefeuille de prêts avec les colonnes Loan_Amount, Maturity_Years, Default_Probability, etc.
+        recovery_rate (float): Taux de recouvrement en cas de défaut.
+        tranche_spreads (dict): Spreads des tranches (Mezzanine et Senior).
+        risk_free_rate (float): Taux sans risque utilisé pour l'actualisation.
+        num_samples (int): Nombre de simulations Monte Carlo.
+        senior_attachment (float): Attachement supérieur pour la tranche Senior.
+        mezz_attachment (float): Attachement supérieur pour la tranche Mezzanine.
+
+    Returns:
+        tuple: 
+            - net_cash_flows (ndarray): Flux nets (positifs - pertes) pour chaque période.
+            - tranche_prices (dict): Prix moyens des tranches.
+            - interest_payments (ndarray): Paiements d'intérêts par période.
+            - principal_payments (ndarray): Remboursements de principal par période.
+            - loan_states (ndarray): États des prêts (0 = actif, 1 = défaut).
+            - losses_per_period (ndarray): Pertes totales par période.
+            - initial_investment (dict): Investissements initiaux par tranche.
+            - expected_perf (dict): Performances attendues des tranches.
+    """
+    # Déterminer le nombre de périodes (maximum des maturités des prêts)
     num_periods = portfolio["Maturity_Years"].max()
-    loan_states = np.zeros((num_samples, len(portfolio), num_periods))  # 0 = non défaut, 1 = défaut 
-    annual_default_probabilities = portfolio["Default_Probability"].values  # Probabilités de défaut initiales (à un an)
+    
+    # Initialisation des états des prêts (0 = non défaut, 1 = défaut)
+    loan_states = np.zeros((num_samples, len(portfolio), num_periods)) 
+    annual_default_probabilities = portfolio["Default_Probability"].values
 
     tranche_spreads = tranche_spreads or {"Mezzanine": 0.03, "Senior": 0.01}  
     # Par défaut en % (La tranche equity prend ce qu'il reste une fois ces deux tranches payé)
@@ -48,7 +74,7 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
     
     for t in range(num_periods):
         if t == 0:
-            # Première période : directement utiliser les probabilités initiales
+            # Première période : Probabilités de défaut initiales
             correlated_samples = cop.gaussian_copula_sample(active_correlation_matrix, num_samples)
             loan_states[:, :, t] = (correlated_samples < annual_default_probabilities).astype(int)
         else:
@@ -57,6 +83,7 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
             no_default = np.array(loan_states[:, :, :t].sum(axis=2)==0, dtype=bool)
             not_matured = np.array(portfolio["Maturity_Years"].values[np.newaxis, :] > t, dtype=bool)
             active_loans = (no_default & not_matured).astype(int) # Non en défaut et t < maturité 
+            
             # Simuler uniquement pour les prêts actifs
             for sample_idx in range(active_loans.shape[0]):
                 active_indices = np.where(active_loans[sample_idx] == 1)[0]
@@ -67,12 +94,12 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
                     conditional_defaults = (correlated_samples < annual_default_probabilities[active_indices]).astype(int)
                     loan_states[sample_idx, active_indices, t] = conditional_defaults
 
-    # Calculer les pertes
+    # Calculer les pertes par période
     loan_amounts = portfolio["Loan_Amount"].values
     portfolio_total = portfolio["Loan_Amount"].sum()
     losses_per_period = (1 - recovery_rate) * (loan_states * loan_amounts[None, :, None])
     
-    # Calcul des cash flows positifs
+    # Calcul des paiements de principal et d'intérêts
     principal_payments = np.zeros_like(loan_states)  # Initialiser à 0 pour toutes les périodes
     interest_payments = np.zeros_like(loan_states, dtype=float)
 
@@ -81,20 +108,22 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
         
         for t in range(num_periods):
             if t == maturity_period:
-                # Paiement du principal uniquement à maturité si pas en défaut
+                # Paiement du principal et des intérêts à maturité si pas en défaut
                 for sample in range(num_samples):
                     if np.all(loan_states[sample, i, :maturity_period + 1] == 0):  # Pas de défaut jusqu'à maturité
                         principal_payments[sample, i, t] = loan.Loan_Amount
                         interest_payments[sample, i, t] = loan.Loan_Amount * loan.Interest_Rate
             elif t < maturity_period:
-                # Paiement des intérêts pour les périodes actives
+                # Paiement des intérêts avant maturité si le prêt est actif
                 for sample in range(num_samples):
                     if np.all(loan_states[sample, i, :t + 1] == 0):  # Actif dans cette période
                         interest_payments[sample, i, t] = loan.Loan_Amount * loan.Interest_Rate
     
+    # Flux totaux (principal + intérêts) et flux nets
     cash_flows = principal_payments + interest_payments # Flux totaux (principal + intérêts)
     net_cash_flows = cash_flows - losses_per_period # Flux nets par période
     
+     # Calcul des limites de tranches et des prix
     tranche_limits = portfolio_total*np.array([mezz_attachment, senior_attachment-mezz_attachment, 1-senior_attachment])
     tranche_prices, initial_investment, expected_perf = ut.calculate_cdo_cashflows_with_limits(principal_payments, 
                                                                                                interest_payments,
@@ -102,6 +131,8 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
                                                                                                tranche_limits, 
                                                                                                tranche_rates=np.array(list(tranche_spreads.values())), 
                                                                                                risk_free_rate=risk_free_rate)
+    
+    # Moyenne des prix des tranches
     tranche_prices = {
         "Senior": tranche_prices["Senior"].sum(axis=1).mean(),
         "Mezzanine": tranche_prices["Mezzanine"].sum(axis=1).mean(),
@@ -113,6 +144,24 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
 def pricing_CLO_multi_periode_clayton(copulas_type: str, portfolio, recovery_rate=0.4, 
                                       tranche_spreads=None, risk_free_rate=0.03, num_samples=100,
                                       senior_attachment= 0.3, mezz_attachment= 0.1):
+    """Idem a fct précédente mais avec une copule archimédiénne
+
+    Args:
+        copulas_type (str): _description_
+        portfolio (_type_): _description_
+        recovery_rate (float, optional): _description_. Defaults to 0.4.
+        tranche_spreads (_type_, optional): _description_. Defaults to None.
+        risk_free_rate (float, optional): _description_. Defaults to 0.03.
+        num_samples (int, optional): _description_. Defaults to 100.
+        senior_attachment (float, optional): _description_. Defaults to 0.3.
+        mezz_attachment (float, optional): _description_. Defaults to 0.1.
+
+    Raises:
+        ValueError: _description_
+
+    Returns:
+        _type_: _description_
+    """
     
     num_periods = portfolio["Maturity_Years"].max()
     loan_states = np.zeros((num_samples, len(portfolio), num_periods))  # 0 = non défaut, 1 = défaut 

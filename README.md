@@ -45,9 +45,9 @@ Description of the project: You are tasked with structuring a collateralized loa
 
 - **Write the report**
 
-## Documentation:
+# Documentation:
 
-## Documentation: CLO Pricing Function Using Gaussian Copulas
+## CLO Pricing Function Using Gaussian Copulas
 
 This function implements a multi-period pricing model for Collateralized Loan Obligations (CLOs), using Gaussian copulas to simulate default correlations between loans in a portfolio. It calculates losses, positive and negative cash flows, and estimates the prices of tranches (Senior, Mezzanine, and Equity) across multiple periods.
 

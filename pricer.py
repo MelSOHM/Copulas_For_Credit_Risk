@@ -248,8 +248,7 @@ def pricing_CLO_multi_periode_clayton(copulas_type: str, portfolio, recovery_rat
     }
 
     return net_cash_flows, tranche_prices, interest_payments, principal_payments, loan_states, losses_per_period, initial_investment, expected_perf
-
-    
+  
 def calculate_present_value(losses, discount_rate, num_periods=1):
     """
     Calcule la valeur actuelle.

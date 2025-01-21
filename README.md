@@ -112,7 +112,7 @@ Net cash flows are obtained by subtracting losses from positive cash flows (prin
 - **`losses_per_period`** *(ndarray)*: Total losses per period for each simulation.
 - **`initial_investment`** *(dict)*: Initial investment for each tranche.
 - **`expected_perf`** *(dict)*: Expected performance of tranches (yield, average loss, etc.).
-
+Remark: the format of 3D arrays are : (simulation ID, Loan, Time)
 ---
 
 ## **Example Usage**

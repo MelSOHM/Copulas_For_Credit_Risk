@@ -47,6 +47,29 @@ Description of the project: You are tasked with structuring a collateralized loa
 
 # Documentation:
 
+## How the project works ?
+
+- **`data_gen.py`**: This script must be executed before any calculations to generate synthetic data. Be aware that the generated data exhibits extreme default scenarios, making it highly illustrative for stress-testing purposes.
+  
+- You can verify the generated data using the accompanying notebook for better understanding and exploration.
+
+- **`copulas_impl.py`**: This script provides implementations for Gaussian, Clayton, and Gumbel copulas. These implementations are specifically designed to handle multidimensional copulas. If you only need bivariate copulas, we recommend using the `copulas` library for simplicity.
+
+- **`copulas_test.ipynb`**: This notebook allows you to experiment with various copulas and visualize their behavior under different settings. It is an excellent starting point to understand their dynamics.
+
+- **`utils_simulation.py`**: This module contains utility functions for:
+  - Applying the CDO structure (cash flow waterfall and tranche allocation).
+  - Performing quick simulations and gathering basic analytics for a CDO.
+  - Simulating losses tailored for the pricing models.
+
+- **`pricer.py`**: This module provides two core functions for pricing a CDO, utilizing either Gaussian or Archimedean copulas. It is the main engine for estimating tranche prices and expected performance metrics.
+
+- **`simulation_scenario.ipynb`**: Use this notebook to:
+  - Test the pricing functions.
+  - Compute detailed analytics.
+  - Perform scenario testing (coming soon 🚀).
+  - Explore and validate copula features.
+
 ## CLO Pricing Function Using Gaussian Copulas
 
 This function implements a multi-period pricing model for Collateralized Loan Obligations (CLOs), using Gaussian copulas to simulate default correlations between loans in a portfolio. It calculates losses, positive and negative cash flows, and estimates the prices of tranches (Senior, Mezzanine, and Equity) across multiple periods.

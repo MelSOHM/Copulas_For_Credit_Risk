@@ -25,6 +25,7 @@ def simulate_defaults(samples_uniform, default_probabilities):
     """
     return (samples_uniform < default_probabilities).astype(int)
 
+
 def print_summary(defaults_matrix, portfolio, recovery_rate = 0.4):
     """Print some analytics about the simulation
 
@@ -100,23 +101,6 @@ def apply_waterwall(losses, portfolio_total,
         
     return equity_losses, mezzanine_losses, senior_losses
 
-def apply_waterwall_fluxes(losses, principal_payments, interest_payments, spread, portfolio_total, 
-                           senior_attachment= 0.3, mezz_attachment= 0.1):
-    
-    senior_limit = senior_attachment * portfolio_total
-    mezzanine_limit = mezz_attachment * portfolio_total
-    
-    # Losses 
-    equity_losses = np.where(losses > mezzanine_limit, mezzanine_limit, losses)
-    remaining_losses = losses - equity_losses
-    mezzanine_losses = np.where(remaining_losses > senior_limit - mezzanine_limit, senior_limit - mezzanine_limit, remaining_losses)
-    remaining_losses = remaining_losses - mezzanine_losses
-    senior_losses = remaining_losses
-    
-    #Cash
-    senior_cash = min(1-senior_attachment)
-            
-    return equity_losses, mezzanine_losses, senior_losses
 
 def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, losses, 
                                         tranche_limits, tranche_rates, risk_free_rate):
@@ -217,6 +201,7 @@ def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, l
 
     return tranche_results, tranche_limits, [tranche_limits[0],tranche_limits[1]*(1+mezzanine_rate),tranche_limits[2]*(1+senior_rate)]
 
+
 def simmulate_losses_tranche(equity_losses, mezzanine_losses, senior_losses):
     summary = {
         "Tranche": ["Senior", "Mezzanine", "Equity"],
@@ -232,3 +217,25 @@ def simmulate_losses_tranche(equity_losses, mezzanine_losses, senior_losses):
     plt.ylabel("Pertes (%)")
     plt.grid(True)
     plt.show()
+    
+    
+    
+### Archive ###
+
+# def apply_waterwall_fluxes(losses, principal_payments, interest_payments, spread, portfolio_total, 
+#                            senior_attachment= 0.3, mezz_attachment= 0.1):
+    
+#     senior_limit = senior_attachment * portfolio_total
+#     mezzanine_limit = mezz_attachment * portfolio_total
+    
+#     # Losses 
+#     equity_losses = np.where(losses > mezzanine_limit, mezzanine_limit, losses)
+#     remaining_losses = losses - equity_losses
+#     mezzanine_losses = np.where(remaining_losses > senior_limit - mezzanine_limit, senior_limit - mezzanine_limit, remaining_losses)
+#     remaining_losses = remaining_losses - mezzanine_losses
+#     senior_losses = remaining_losses
+    
+#     #Cash
+#     senior_cash = min(1-senior_attachment)
+            
+#     return equity_losses, mezzanine_losses, senior_losses

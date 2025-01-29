@@ -101,7 +101,6 @@ def apply_waterwall(losses, portfolio_total,
         
     return equity_losses, mezzanine_losses, senior_losses
 
-
 def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, losses, 
                                         tranche_limits, tranche_rates, risk_free_rate):
     """
@@ -120,10 +119,10 @@ def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, l
         dict: Un dictionnaire avec les flux nets pour chaque tranche sous forme de tableau (samples, times).
     """
     # Combiner les flux nets
-    net_flows = principal_payments + interest_payments - losses  # (samples, loans, times)
+    postive_flows = principal_payments + interest_payments  # (samples, loans, times)
     
     # Agréger les flux par temps pour chaque sample
-    total_flows = np.sum(net_flows, axis=1)  # (samples, times)
+    total_flows = np.sum(postive_flows, axis=1)  # (samples, times)
     total_losses = np.sum(losses, axis=1)  # (samples, times)
     
     # Initialiser les résultats
@@ -157,50 +156,59 @@ def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, l
 
             # Allouer les pertes
             # Pertes sur Equity
-            if tranche_balances["Equity"][sample] > 0:
+            if remaining_loss > 0 and tranche_balances["Equity"][sample] > 0:
                 equity_loss = min(remaining_loss, tranche_balances["Equity"][sample])
                 tranche_results["Equity"][sample, t] -= equity_loss
                 tranche_balances["Equity"][sample] -= equity_loss
                 remaining_loss -= equity_loss
 
             # Pertes sur Mezzanine
-            if tranche_balances["Mezzanine"][sample] > 0:
+            if remaining_loss > 0 and tranche_balances["Mezzanine"][sample] > 0:
                 mezzanine_loss = min(remaining_loss, tranche_balances["Mezzanine"][sample])
                 tranche_results["Mezzanine"][sample, t] -= mezzanine_loss
                 tranche_balances["Mezzanine"][sample] -= mezzanine_loss
                 remaining_loss -= mezzanine_loss
-                
+
             # Pertes sur Senior
-            senior_loss = min(remaining_loss, tranche_balances["Senior"][sample])
-            tranche_results["Senior"][sample, t] -= senior_loss
-            tranche_balances["Senior"][sample] -= senior_loss
-            remaining_loss -= senior_loss
-            
-            assert remaining_loss == 0 # Il n'est plus censé y avoir de perte a épongé
+            if remaining_loss > 0 and tranche_balances["Senior"][sample] > 0:
+                senior_loss = min(remaining_loss, tranche_balances["Senior"][sample])
+                tranche_results["Senior"][sample, t] -= senior_loss
+                tranche_balances["Senior"][sample] -= senior_loss
+                remaining_loss -= senior_loss
+                
+            # Vérification finale
+            assert remaining_loss == 0, "Toutes les pertes n'ont pas été absorbées correctement !"
+
             # Allouer les paiements
             # Paiements sur Senior
-            if tranche_expected_perf["Senior"][sample] > 0:
+            if remaining_payment > 0 and tranche_expected_perf["Senior"][sample] > 0:
                 senior_payment = min(remaining_payment, tranche_expected_perf["Senior"][sample])
                 tranche_results["Senior"][sample, t] += senior_payment
                 tranche_expected_perf["Senior"][sample] -= senior_payment
                 remaining_payment -= senior_payment
 
             # Paiements sur Mezzanine
-            if tranche_expected_perf["Mezzanine"][sample] > 0:
+            if remaining_payment > 0 and tranche_expected_perf["Mezzanine"][sample] > 0:
                 mezzanine_payment = min(remaining_payment, tranche_expected_perf["Mezzanine"][sample])
                 tranche_results["Mezzanine"][sample, t] += mezzanine_payment
                 tranche_expected_perf["Mezzanine"][sample] -= mezzanine_payment
                 remaining_payment -= mezzanine_payment
 
             # Paiements sur Equity
-            equity_payment = remaining_payment  # Ce qui reste va à Equity
-            tranche_results["Equity"][sample, t] += equity_payment
-            remaining_payment -= equity_payment
-                
-            assert remaining_payment == 0
+            if remaining_payment > 0:
+                equity_payment = remaining_payment  # Ce qui reste va à Equity
+                tranche_results["Equity"][sample, t] += equity_payment
+                remaining_payment -= equity_payment
+
+            # print(f"Sample {sample}, Period {t}")
+            # print(f"Remaining Loss: {remaining_loss}, Remaining Payment: {remaining_payment}")
+            # print(f"Tranche Balances: {tranche_balances}")
+            # print(f"Tranche Payments: {tranche_results}")
+            
+            # Vérification finale
+            assert remaining_payment == 0, "Tous les paiements n'ont pas été alloués correctement !"
 
     return tranche_results, tranche_limits, [tranche_limits[0],tranche_limits[1]*(1+mezzanine_rate),tranche_limits[2]*(1+senior_rate)]
-
 
 def simmulate_losses_tranche(equity_losses, mezzanine_losses, senior_losses):
     summary = {

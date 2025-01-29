@@ -104,9 +104,9 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
     
     # Moyenne des prix des tranches
     tranche_prices = {
-        "Senior": tranche_prices["Senior"].sum(axis=1).mean(),
-        "Mezzanine": tranche_prices["Mezzanine"].sum(axis=1).mean(),
-        "Equity": tranche_prices["Equity"].sum(axis=1).mean(),
+        "Senior": tranche_prices["Senior"].sum(axis=1).mean(),#- initial_investment[2],
+        "Mezzanine": tranche_prices["Mezzanine"].sum(axis=1).mean(), #- initial_investment[1],
+        "Equity": tranche_prices["Equity"].sum(axis=1).mean(),#- initial_investment[0],
     }
 
     return net_cash_flows, tranche_prices, interest_payments, principal_payments, loan_states, losses_per_period, initial_investment, expected_perf
@@ -212,9 +212,9 @@ def pricing_CLO_multi_periode_clayton(copulas_type: str, portfolio, recovery_rat
                                                                                                tranche_rates=np.array(list(tranche_spreads.values())), 
                                                                                                risk_free_rate=risk_free_rate)
     tranche_prices = {
-        "Senior": tranche_prices["Senior"].sum(axis=1).mean(),
-        "Mezzanine": tranche_prices["Mezzanine"].sum(axis=1).mean(),
-        "Equity": tranche_prices["Equity"].sum(axis=1).mean(),
+        "Senior": tranche_prices["Senior"].sum(axis=1).mean() ,#- initial_investment[2],
+        "Mezzanine": tranche_prices["Mezzanine"].sum(axis=1).mean() ,#- initial_investment[1],
+        "Equity": tranche_prices["Equity"].sum(axis=1).mean(),#- initial_investment[0],
     }
 
     return net_cash_flows, tranche_prices, interest_payments, principal_payments, loan_states, losses_per_period, initial_investment, expected_perf

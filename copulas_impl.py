@@ -50,7 +50,7 @@ def archimedean_copula_sample(copula_class, num_samples):
 
 
 def clayton_copula_multivariate(theta, num_samples, portfolio_size):
-    rng = default_rng()
+    _ = default_rng()
     
     # Générer une variable de base
     u0 = uniform.rvs(size=num_samples)
@@ -79,7 +79,7 @@ def gumbel_copula_multivariate(theta, num_samples, portfolio_size):
     if theta < 1:
         raise ValueError("Theta doit être supérieur ou égal à 1 pour la copule de Gumbel.")
 
-    rng = default_rng()
+    _ = default_rng()
     
     # Générer une variable de base
     u0 = uniform.rvs(size=num_samples)

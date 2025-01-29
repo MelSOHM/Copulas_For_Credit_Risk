@@ -31,7 +31,7 @@ Description of the project: You are tasked with structuring a collateralized loa
 
 - **Pricing Framework**: Develop a pricing mechanism for the CLO tranches based on expected losses, investor risk preferences, and market conditions (e.g., interest rates, recovery rates). Monte-Carlo pricing using the copulas ? ✅
 
-- **Risk Analysis**: Evaluate the tail risk and sensitivity of each tranche under different economic scenarios using stress testing and scenario analysis.
+- **Risk Analysis**: Evaluate the tail risk and sensitivity of each tranche under different economic scenarios using stress testing and scenario analysis. ✅ *(Still has to implement strssing accoring to scenarios)*
 
 - **Comparison Metrics**: Define clear metrics (e.g., VaR, expected shortfall, tranche loss distributions) to compare the performance of Gaussian and Archimedean copulas.
 

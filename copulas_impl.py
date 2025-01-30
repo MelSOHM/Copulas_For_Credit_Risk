@@ -1,9 +1,8 @@
 import numpy as np
-from scipy.stats import norm, multivariate_normal
+from scipy.stats import norm, multivariate_normal, gamma, uniform, levy_stable
 from copulas.univariate import GaussianKDE
 from copulas.bivariate import Clayton, Gumbel
 import matplotlib.pyplot as plt
-from scipy.stats import uniform
 from numpy.random import default_rng
 
 def gaussian_copula_sample(correlation_matrix, num_samples):
@@ -114,3 +113,44 @@ def transform_to_exponential(uniform_samples, lambda_rate=1):
         _type_: the exp samples
     """
     return -np.log(1 - uniform_samples) / lambda_rate
+
+
+
+def clayton_copula(theta, num_samples, portfolio_size):
+    """Simule un échantillon de la copule de Clayton.
+    
+    Args:
+        theta (float): Paramètre de dépendance de la copule de Gumbel (\( \theta \geq 0 \)).
+        num_samples (int): Nombre d'échantillons à générer.
+        portfolio_size (int): Dimensionnalité du portefeuille (nombre de prêts).
+
+    Returns:
+        ndarray: Échantillons multivariés de la copule de Gumbel. shape (num_samples, portfolio_size)
+    """
+    
+    V = gamma.rvs(a=1/theta, scale=1, size=num_samples)  # Étape 1
+    X = uniform.rvs(size=(num_samples, portfolio_size))  
+    X = -np.log(X)  # Étapes 2/3 echantillon iid loi Exp(1) 
+    U = (1 + (X / V[:, np.newaxis])) ** (-1/theta)  # Étape 4 num_samples echantillons independants d'une copule de clayton de 
+    # dimension portfolio_size
+    return U
+
+def gumbel_copula(theta, num_samples, portfolio_size):
+    """Simule un échantillon de la copule de Gumbel.
+    
+    Args:
+        theta (float): Paramètre de dépendance de la copule de Gumbel (\( \theta \geq 1 \)).
+        num_samples (int): Nombre d'échantillons à générer.
+        portfolio_size (int): Dimensionnalité du portefeuille (nombre de prêts).
+
+    Returns:
+        ndarray: Échantillons multivariés de la copule de Gumbel. shape (num_samples, portfolio_size)
+    """
+    if theta < 1:
+        raise ValueError("Theta doit être supérieur ou égal à 1 pour la copule de Gumbel.")
+    V = levy_stable.rvs(alpha=1/theta, beta=1, size=num_samples)  # Étape 1 loi Stable(1/theta, 1)
+    X = uniform.rvs(size=(num_samples, portfolio_size))  
+    X = -np.log(X)  # Étapes 2/3 echantillon iid loi Exp(1) 
+    U = np.exp(- (X / V[:, np.newaxis]) ** (1/theta))  # Étape 4 num_samples echantillons independants d'une copule de Gumbel de 
+    # dimension portfolio_size
+    return U

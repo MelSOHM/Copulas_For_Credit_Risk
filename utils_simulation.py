@@ -101,8 +101,9 @@ def apply_waterwall(losses, portfolio_total,
         
     return equity_losses, mezzanine_losses, senior_losses
 
+
 def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, losses, 
-                                        tranche_limits, tranche_rates, risk_free_rate):
+                                        tranche_limits, tranche_rates, risk_free_rate, recovery):
     """
     Calcule les flux de trésorerie pour les tranches d'un CDO en tenant compte des pertes, paiements,
     et des soldes cumulés des tranches.
@@ -119,7 +120,7 @@ def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, l
         dict: Un dictionnaire avec les flux nets pour chaque tranche sous forme de tableau (samples, times).
     """
     # Combiner les flux nets
-    postive_flows = principal_payments + interest_payments  # (samples, loans, times)
+    postive_flows = principal_payments + interest_payments + recovery  # (samples, loans, times)
     
     # Agréger les flux par temps pour chaque sample
     total_flows = np.sum(postive_flows, axis=1)  # (samples, times)
@@ -158,21 +159,21 @@ def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, l
             # Pertes sur Equity
             if remaining_loss > 0 and tranche_balances["Equity"][sample] > 0:
                 equity_loss = min(remaining_loss, tranche_balances["Equity"][sample])
-                tranche_results["Equity"][sample, t] -= equity_loss
+                # tranche_results["Equity"][sample, t] -= equity_loss
                 tranche_balances["Equity"][sample] -= equity_loss
                 remaining_loss -= equity_loss
 
             # Pertes sur Mezzanine
             if remaining_loss > 0 and tranche_balances["Mezzanine"][sample] > 0:
                 mezzanine_loss = min(remaining_loss, tranche_balances["Mezzanine"][sample])
-                tranche_results["Mezzanine"][sample, t] -= mezzanine_loss
+                # tranche_results["Mezzanine"][sample, t] -= mezzanine_loss
                 tranche_balances["Mezzanine"][sample] -= mezzanine_loss
                 remaining_loss -= mezzanine_loss
 
             # Pertes sur Senior
             if remaining_loss > 0 and tranche_balances["Senior"][sample] > 0:
                 senior_loss = min(remaining_loss, tranche_balances["Senior"][sample])
-                tranche_results["Senior"][sample, t] -= senior_loss
+                # tranche_results["Senior"][sample, t] -= senior_loss
                 tranche_balances["Senior"][sample] -= senior_loss
                 remaining_loss -= senior_loss
                 
@@ -183,21 +184,21 @@ def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, l
             # Paiements sur Senior
             if remaining_payment > 0 and tranche_expected_perf["Senior"][sample] > 0:
                 senior_payment = min(remaining_payment, tranche_expected_perf["Senior"][sample])
-                tranche_results["Senior"][sample, t] += senior_payment
-                tranche_expected_perf["Senior"][sample] -= senior_payment
+                tranche_results["Senior"][sample, t] += senior_payment/((1+risk_free_rate)**t)
+                tranche_expected_perf["Senior"][sample] -= senior_payment/((1+risk_free_rate)**t)
                 remaining_payment -= senior_payment
 
             # Paiements sur Mezzanine
             if remaining_payment > 0 and tranche_expected_perf["Mezzanine"][sample] > 0:
                 mezzanine_payment = min(remaining_payment, tranche_expected_perf["Mezzanine"][sample])
-                tranche_results["Mezzanine"][sample, t] += mezzanine_payment
-                tranche_expected_perf["Mezzanine"][sample] -= mezzanine_payment
+                tranche_results["Mezzanine"][sample, t] += mezzanine_payment/((1+risk_free_rate)**t)
+                tranche_expected_perf["Mezzanine"][sample] -= mezzanine_payment/((1+risk_free_rate)**t)
                 remaining_payment -= mezzanine_payment
 
             # Paiements sur Equity
             if remaining_payment > 0:
                 equity_payment = remaining_payment  # Ce qui reste va à Equity
-                tranche_results["Equity"][sample, t] += equity_payment
+                tranche_results["Equity"][sample, t] += equity_payment/((1+risk_free_rate)**t)
                 remaining_payment -= equity_payment
 
             # print(f"Sample {sample}, Period {t}")

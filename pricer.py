@@ -68,6 +68,7 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
     loan_amounts = portfolio["Loan_Amount"].values
     portfolio_total = portfolio["Loan_Amount"].sum()
     losses_per_period = (1 - recovery_rate) * (loan_states * loan_amounts[None, :, None])
+    recovery = recovery_rate * (loan_states * loan_amounts[None, :, None])
     
     # Calcul des paiements de principal et d'intérêts
     principal_payments = np.zeros_like(loan_states)  # Initialiser à 0 pour toutes les périodes
@@ -100,13 +101,14 @@ def pricing_CLO_multi_periode_gaussian(correlation_matrix, portfolio, recovery_r
                                                                                                losses_per_period, 
                                                                                                tranche_limits, 
                                                                                                tranche_rates=np.array(list(tranche_spreads.values())), 
-                                                                                               risk_free_rate=risk_free_rate)
+                                                                                               risk_free_rate=risk_free_rate,
+                                                                                               recovery= recovery)
     
     # Moyenne des prix des tranches
     tranche_prices = {
-        "Senior": tranche_prices["Senior"].sum(axis=1).mean(),#- initial_investment[2],
-        "Mezzanine": tranche_prices["Mezzanine"].sum(axis=1).mean(), #- initial_investment[1],
-        "Equity": tranche_prices["Equity"].sum(axis=1).mean(),#- initial_investment[0],
+        "Senior": tranche_prices["Senior"].sum(axis=1).mean() - initial_investment[2],
+        "Mezzanine": tranche_prices["Mezzanine"].sum(axis=1).mean() - initial_investment[1],
+        "Equity": tranche_prices["Equity"].sum(axis=1).mean() - initial_investment[0],
     }
 
     return net_cash_flows, tranche_prices, interest_payments, principal_payments, loan_states, losses_per_period, initial_investment, expected_perf
@@ -180,6 +182,7 @@ def pricing_CLO_multi_periode_clayton(copulas_type: str, portfolio, recovery_rat
     loan_amounts = portfolio["Loan_Amount"].values
     portfolio_total = portfolio["Loan_Amount"].sum()
     losses_per_period = (1 - recovery_rate) * (loan_states * loan_amounts[None, :, None])
+    recovery = recovery_rate * (loan_states * loan_amounts[None, :, None])
     
     # Calcul des cash flows positifs
     principal_payments = np.zeros_like(loan_states)  # Initialiser à 0 pour toutes les périodes
@@ -210,11 +213,12 @@ def pricing_CLO_multi_periode_clayton(copulas_type: str, portfolio, recovery_rat
                                                                                                losses_per_period, 
                                                                                                tranche_limits, 
                                                                                                tranche_rates=np.array(list(tranche_spreads.values())), 
-                                                                                               risk_free_rate=risk_free_rate)
+                                                                                               risk_free_rate=risk_free_rate,
+                                                                                               recovery=recovery)
     tranche_prices = {
-        "Senior": tranche_prices["Senior"].sum(axis=1).mean() ,#- initial_investment[2],
-        "Mezzanine": tranche_prices["Mezzanine"].sum(axis=1).mean() ,#- initial_investment[1],
-        "Equity": tranche_prices["Equity"].sum(axis=1).mean(),#- initial_investment[0],
+        "Senior": tranche_prices["Senior"].sum(axis=1).mean() - initial_investment[2],
+        "Mezzanine": tranche_prices["Mezzanine"].sum(axis=1).mean() - initial_investment[1],
+        "Equity": tranche_prices["Equity"].sum(axis=1).mean()- initial_investment[0],
     }
 
     return net_cash_flows, tranche_prices, interest_payments, principal_payments, loan_states, losses_per_period, initial_investment, expected_perf

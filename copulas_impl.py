@@ -47,7 +47,7 @@ def archimedean_copula_sample(copula_class, num_samples):
     samples = copula.sample(num_samples)
     return samples
 
-
+'''
 def clayton_copula_multivariate(theta, num_samples, portfolio_size):
     _ = default_rng()
     
@@ -91,7 +91,7 @@ def gumbel_copula_multivariate(theta, num_samples, portfolio_size):
         samples.append(marginal)
     
     return np.array(samples).T
-
+'''
 
 def plot_samples(samples, title):
     plt.scatter(samples[:, 0], samples[:, 1], alpha=0.6, edgecolor='k')
@@ -116,7 +116,7 @@ def transform_to_exponential(uniform_samples, lambda_rate=1):
 
 
 
-def clayton_copula(theta, num_samples, portfolio_size):
+def clayton_copula_multivariate(theta, num_samples, portfolio_size):
     """Simule un échantillon de la copule de Clayton.
     
     Args:
@@ -135,7 +135,7 @@ def clayton_copula(theta, num_samples, portfolio_size):
     # dimension portfolio_size
     return U
 
-def gumbel_copula(theta, num_samples, portfolio_size):
+def gumbel_copula_multivariate(theta, num_samples, portfolio_size):
     """Simule un échantillon de la copule de Gumbel.
     
     Args:

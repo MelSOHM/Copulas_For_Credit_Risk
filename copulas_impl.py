@@ -147,10 +147,23 @@ def gumbel_copula_multivariate(theta, num_samples, portfolio_size):
         ndarray: Échantillons multivariés de la copule de Gumbel. shape (num_samples, portfolio_size)
     """
     if theta < 1:
-        raise ValueError("Theta doit être supérieur ou égal à 1 pour la copule de Gumbel.")
-    V = levy_stable.rvs(alpha=1/theta, beta=1, size=num_samples)  # Étape 1 loi Stable(1/theta, 1)
-    X = uniform.rvs(size=(num_samples, portfolio_size))  
-    X = -np.log(X)  # Étapes 2/3 echantillon iid loi Exp(1) 
-    U = np.exp(- (X / V[:, np.newaxis]) ** (1/theta))  # Étape 4 num_samples echantillons independants d'une copule de Gumbel de 
-    # dimension portfolio_size
+        raise ValueError("Theta doit être supérieur ou égal à 1 pour la copule de Gumbel.")    
+    alpha = 1 / theta
+    # Étape 1: Générer U1, U2 ~ U(0,1)
+    U = np.random.uniform(0, 1, (num_samples,2))
+    E2 = -np.log(U[:,0])
+    U1 = np.pi * (U[:,1] - 0.5)
+    # Étape 4: Calculer a = 0.5π + U1
+    a = (0.5 * np.pi + U1) * alpha
+    # Étape 5: Calculer s = sin(a)
+    s = np.sin(a)
+    # Étape 6: Calculer c = cos(U1 - a)
+    c = np.cos(U1) ** (1/alpha)
+    V = (np.cos(U1 - a) / E2) ** ((1-alpha)/alpha) * s / c
+    # Générer X1, ..., Xd ~ U(0,1)
+    X = np.random.uniform(0, 1, (num_samples, portfolio_size))
+    # Transformer X en X ~ Exp(1)
+    X = -np.log(X)
+    U = np.exp(-(X/V[:,None])**(1/theta))
     return U
+

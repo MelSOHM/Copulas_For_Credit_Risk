@@ -125,7 +125,7 @@ def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, l
     # Agréger les flux par temps pour chaque sample
     total_flows = np.sum(postive_flows, axis=1)  # (samples, times)
     total_losses = np.sum(losses, axis=1)  # (samples, times)
-    
+    CDO_life_span = (total_flows.shape[1])
     # Initialiser les résultats
     tranche_results = {
         "Equity": np.zeros_like(total_flows),
@@ -145,12 +145,12 @@ def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, l
         # Soldes cumulés pour chaque tranche
     tranche_expected_perf = {
         "Equity": np.full(total_flows.shape[0], tranche_limits[0]),  # 10% initial pour Equity
-        "Mezzanine": np.full(total_flows.shape[0], tranche_limits[1]*(1+mezzanine_rate)),  # 20% initial pour Mezzanine
-        "Senior": np.full(total_flows.shape[0], tranche_limits[2]*(1+senior_rate))   # 70% initial pour Senior
+        "Mezzanine": np.full(total_flows.shape[0], tranche_limits[1]*(1+mezzanine_rate)**(CDO_life_span)),  # 20% initial pour Mezzanine
+        "Senior": np.full(total_flows.shape[0], tranche_limits[2]*(1+senior_rate)**(CDO_life_span))   # 70% initial pour Senior
     }
 
     # Répartir les pertes et les paiements par tranche
-    for t in range(total_flows.shape[1]):  # Pour chaque période
+    for t in range(CDO_life_span):  # Pour chaque période
         for sample in range(total_flows.shape[0]):  # Pour chaque échantillon
             remaining_loss = total_losses[sample, t]
             remaining_payment = total_flows[sample, t]
@@ -209,7 +209,7 @@ def calculate_cdo_cashflows_with_limits(principal_payments, interest_payments, l
             # Vérification finale
             assert remaining_payment == 0, "Tous les paiements n'ont pas été alloués correctement !"
 
-    return tranche_results, tranche_limits, [tranche_limits[0],tranche_limits[1]*(1+mezzanine_rate),tranche_limits[2]*(1+senior_rate)]
+    return tranche_results, tranche_limits, [tranche_limits[0],tranche_limits[1]*(1+mezzanine_rate)**(CDO_life_span),tranche_limits[2]*(1+senior_rate)**(CDO_life_span)]
 
 def simmulate_losses_tranche(equity_losses, mezzanine_losses, senior_losses):
     summary = {

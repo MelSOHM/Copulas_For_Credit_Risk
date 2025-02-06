@@ -22,9 +22,9 @@ def calculate_var_and_es(losses, confidence_level=0.99):
         tuple: (VaR, ES) aggregated across all periods.
     """
     sorted_losses = np.sort(losses)
-    var_index = int((1 - confidence_level) * len(sorted_losses))
+    var_index = int((confidence_level) * len(sorted_losses))
     var = sorted_losses[var_index]
-    es = sorted_losses[:var_index].mean()  # Expected Shortfall (average of worst cases)
+    es = sorted_losses[var_index:].mean()  # Expected Shortfall (average of worst cases)
     return var, es
 
 def tranche_risk_analysis(loss_dict, tranche_limits, tranche_names, portfolio, initial_investments, confidence_level=0.99):

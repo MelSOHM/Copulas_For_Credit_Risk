@@ -11,7 +11,7 @@ np.random.seed(seed)  # For reproducibility
 loan_ids = [f"Loan_{i+1}" for i in range(num_loans)]
 loan_amounts = np.random.uniform(5e5, 2e6, num_loans)  # Loan amounts between $500k and $2M
 maturities = np.random.randint(1, 10, num_loans)  # Maturities between 1 and 10 years
-default_probabilities = np.random.uniform(0.01, 0.2, num_loans)  # Default probabilities between 1% and 20%
+default_probabilities = np.random.uniform(0.005, 0.05, num_loans)  # Default probabilities between 1% and 20%
 interest_rates = np.random.uniform(0.02, 0.1, num_loans)  # Interest rates between 2% and 10%
 
 def generate_correlation_matrix(size):
